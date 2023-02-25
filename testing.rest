@@ -1,0 +1,11 @@
+POST http://localhost:3000/users Content-Type: application/json 
+JWT_SECRET = qwertyuiopasdfghjkl
+{
+"name": "Bob", "email" : "bob@email.com", "password": "bob", "user_type": "admin", "remarks": "active"
+}
+
+### POST http://localhost:5000/api/auth/login Content-Type: application/json
+
+{
+"username" : "daved", "password": "123456"
+}

@@ -1,0 +1,9 @@
+res = response
+req = reqire
+post = to save in the database
+
+get = read the data
+post =  create a date
+put =  update a data
+patch = update a data
+delete = delete

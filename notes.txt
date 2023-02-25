@@ -1,0 +1,12 @@
+npm init -y
+npm install express pg
+npm install -D nodemon
+npm install jsonwebtoken
+npm install multer
+npm run dev
+express -fileupload
+capscade
+
+jwt, authentication, do it 
+
+a
