@@ -1,15 +1,39 @@
 import { Router } from "express";
-import bcrypt from 'bcrypt';
-import { authenticate } from '../middleware.js'
+import bcrypt from "bcrypt";
+import { authenticate } from "../middleware.js";
 
 export function createUserRouter(pool) {
   const router = Router();
 
+  // router.get("/:id", authenticate, async (req, res) => {
+  //   console.log("get")
+  //   console.log("id")
+  //   let id = req.params.id
+  //   if (id === "me")
+  //   { id = req.user.id }
+  //   const result = await pool.query(`SELECT * FROM public.users WHERE id =$1` ,[req.params.id]);
+  //   return res.json({ data: result.rows });
+  // });
 
-// post
+  router.get("/me", authenticate, async (req, res) => {
+    console.log("get");
+    console.log("id");
+    let id = req.user.user_id;
+    // req = { user: { user_id: 55 } }
+    // req.user = { user_id: 55 }
+    // id  = req.user.user_id
+    // req.user.id
+    const result = await pool.query(`SELECT * FROM public.users WHERE id=$1`, [
+      id,
+    ]);
+    console.log(req.user);
+    return res.json({ data: result.rows[0] });
+  });
+
+  // post
   router.post("", async (req, res) => {
-    console.log("get")
-   
+    console.log("get");
+
     const data = req.body;
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     if (
@@ -23,31 +47,35 @@ export function createUserRouter(pool) {
     ) {
       return res.status(402).json({ err: "Missing data" });
     }
-
-    await pool.query(
-      `
+    try {
+      await pool.query(
+        `
         INSERT INTO public.users (username, password, first_name, last_name, birthday, gender, address)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         `,
-      [
-        data.username,
-        hashedPassword,
-        data.firstName,
-        data.lastName,
-        data.birthday,
-        data.gender,
-        data.address,
-      ]
-    );
+        [
+          data.username,
+          hashedPassword,
+          data.firstName,
+          data.lastName,
+          data.birthday,
+          data.gender,
+          data.address,
+        ]
+      );
+    } catch (error){
+      console.log(error.code)
+      if (error.code === "23505"){
+        return res.status(402).json({err: "username already exist"})
+      }
 
+    }
     res.json({ message: "Successfully registered" });
   });
 
   // get
-  router.get("", async (req, res) => {
-    const result = await pool.query(
-      "SELECT * FROM public.users",
-    );
+  router.get("/", async (req, res) => {
+    const result = await pool.query("SELECT * FROM public.users");
     res.json({ data: result.rows });
   });
 
@@ -56,15 +84,16 @@ export function createUserRouter(pool) {
   //   return res.json({ data: result.rows [ 0 ]});
   // });
 
-  router.get("/:id'", async (req, res) => {
-    console.log("get")
-    const id = req.params.id
-    const result = await pool.query(`SELECT * FROM public.users WHERE id ='${id}' `);
-    return res.json({ data: result.rows }); 
-  });
+  // router.get("/me", authenticate, async (req, res) => {
+  //   console.log("get")
+  //   console.log("id")
+  //   let id = req.user.user_id
+  //   const result = await pool.query(`SELECT * FROM public.users WHERE id ='${id}' `);
+  //   return res.json({ data: result.rows });
+  // });
 
-   // //   put
-   router.put("/:id", async (req, res) => {
+  // //   put
+  router.put("/:id", async (req, res) => {
     console.log(req);
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     const id = req.params.id;
@@ -80,7 +109,8 @@ export function createUserRouter(pool) {
     ) {
       res.status(400).json({ err: "missing data" });
     }
-    await pool.query(`
+    await pool.query(
+      `
       UPDATE public.users SET username=$1, password=$2, first_name=$3, last_name=$4, birthday=$5, gender=$6, address=$7 WHERE public.users.id = ${id}`,
       [
         data.username,
@@ -89,9 +119,9 @@ export function createUserRouter(pool) {
         data.lastName,
         data.birthday,
         data.gender,
-        data.address
+        data.address,
       ]
-      );
+    );
     res.json({ message: "User updated successfully" });
   });
 
@@ -102,6 +132,6 @@ export function createUserRouter(pool) {
     await pool.query(`DELETE FROM public.users WHERE id = ${id}`);
     res.json({ message: "Page deleted successfully" });
   });
- 
+
   return router;
 }

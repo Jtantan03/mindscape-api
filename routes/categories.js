@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticate } from "../middleware.js"
 
 export function createCategoryRouter(pool) {
   const router = Router();
@@ -8,40 +9,41 @@ export function createCategoryRouter(pool) {
     res.json({ data: result.rows });
   });
 
-  router.get("/:id", async (req, res) => {
-    const id = req.params.id;
-    const result = await pool.query(`SELECT * FROM public.categories WHERE id = ${id}`);
+  router.get("/:id", authenticate, async (req, res) => {
+    let id = req.user.user_id;
+    const result = await pool.query(
+      `SELECT * FROM public.categories WHERE user_id=$1 `, [id]
+    );
     res.json({ data: result.rows });
   });
 
   // post
-  router.post("", async (req, res) => {
-    const userId = 10;
+  router.post("/", authenticate, async (req, res) => {
+    const user_id = req.user.user_id;
     const data = req.body;
-
+    console.log("wow", data)
     if (
       !data.name 
     ) {
       return res.status(402).json({ err: "Missing data" });
     }
-
     await pool.query(
       `
-        INSERT INTO public.categories (user_id, category_name)
+        INSERT INTO public.categories (category_name, user_id)
         VALUES ($1, $2)
         `,
       [
-        userId,
-        data.name
+        data.name,
+        user_id,
       ]
     );
 
-    res.json({ message: "Successfully registered" });
+    res.json({ message: "Successfully created" });
   });
 
     // EDIT THE DATA
 
-    router.put("/:id", async (req, res) => {
+    router.put("/:id", authenticate, async (req, res) => {
       const id = req.params.id;
       const { name } = req.body;
       if (!name) {
