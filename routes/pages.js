@@ -61,19 +61,48 @@ export function createPageRouter(pool) {
 
   router.get("/private", authenticate, async (req, res) => {
     const userId = req.user.user_id;
-    console.log(userId)
     try {
       const result = await pool.query(
-        
-          // SELECT * FROM public.pages
-          // WHERE user_id = $1 AND private = true
-          `
+        // SELECT * FROM public.pages
+        // WHERE user_id = $1 AND private = true
+        `
           SELECT username, user_id, date, title, story, private
         FROM public.users
 		INNER JOIN pages ON users.id = pages.user_id
           WHERE user_id = $1 AND private = true
         `,
         [userId]
+      );
+
+      res.json({ data: result.rows });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ err: "Server error" });
+    }
+  });
+  router.get("/category/:id", authenticate, async (req, res) => {
+    const userId = req.user.user_id;
+    const id = req.params.id;
+    try {
+      const result = await pool.query(
+        // SELECT * FROM public.pages
+        // WHERE user_id = $1 AND private = true
+        `
+      SELECT 
+      u.username, 
+      p.date, 
+      p.title, 
+      p.story, 
+      p.private, 
+      c.category_name 
+    FROM 
+    public.users u 
+    JOIN public.pages p ON u.id = p.user_id 
+    JOIN public.categories c ON p.category_id = c.id
+    WHERE 
+    u.id = $1 AND c.id = $2;
+        `,
+        [userId, id]
       );
 
       res.json({ data: result.rows });
@@ -106,8 +135,6 @@ export function createPageRouter(pool) {
     }
   });
 
-  
-
   //important
   // router.get("/", async (req, res) => { // for all users diary
   //   try {
@@ -120,27 +147,31 @@ export function createPageRouter(pool) {
   //   }
   // });
 
-  
-
   //just remove the private
   router.post("/", authenticate, async (req, res) => {
     const user_id = req.user.user_id;
-    // console.log(req.user);
     const data = req.body;
-    console.log(data)
-    if (!data.title || !data.date || !data.story || !data.private === undefined) {
-      return null
+    if (
+      !data.title ||
+      !data.date ||
+      !data.story ||
+      !data.private === undefined ||
+      !data.categoryId
+    ) {
+      return null;
       // res.status(400).json({ err: "missing data" });
     }
-
+    console.log("this is the data", data);
     await pool.query(
-      `INSERT INTO public.pages ( title, date, story, private, user_id)
-      VALUES ($1, $2, $3, $4, ${user_id})`,
+      `INSERT INTO public.pages ( title, date, story, category_id, private, user_id)
+      VALUES ($1, $2, $3, $4, $5, $6)`,
       [
         data.title,
         data.date,
         data.story,
-        data.private == null ? false : true// add private value here
+        data.categoryId,
+        data.private == null ? false : true, // add private value here
+        user_id
       ]
     );
 
@@ -179,9 +210,13 @@ export function createPageRouter(pool) {
   router.put("/:id", authenticate, async (req, res) => {
     let id = req.params.id;
     const data = req.body.body;
-    console.log(req)
     // const data = req.body;
-    if (!data.title || !data.story || !data.date || !data.private === undefined) {
+    if (
+      !data.title ||
+      !data.story ||
+      !data.date ||
+      !data.private === undefined
+    ) {
       res.status(400).json({ err: "Missing data" });
     }
     await pool.query(
@@ -194,13 +229,7 @@ export function createPageRouter(pool) {
             private = $4
             WHERE id = $5
             `,
-      [
-        data.date,
-        data.title,
-        data.story,
-        data.private,
-        id,
-      ]
+      [data.date, data.title, data.story, data.private, id]
     );
     res.json({ message: "Page updated successfully" });
   });
@@ -212,9 +241,9 @@ export function createPageRouter(pool) {
 
   //   if (!data.title || !data.story || !data.date ) {
   //     res.status(400).json({ err: "Missing data" });
-  //     return;  
+  //     return;
   //   }
-    
+
   //   const private_value = data.private || false;
 
   //   try {
@@ -238,17 +267,17 @@ export function createPageRouter(pool) {
   //     await pool.query(
   //       `
   //       UPDATE public.pages
-  //       SET 
-  //       date = $1, 
-  //       title = $2, 
+  //       SET
+  //       date = $1,
+  //       title = $2,
   //       story = $3,
-  //       private = $4 
+  //       private = $4
   //       WHERE id = $5
   //       `,
-  //       [data.date, 
-  //         data.title, 
-  //         data.story, 
-  //         private_value, 
+  //       [data.date,
+  //         data.title,
+  //         data.story,
+  //         private_value,
   //         id]
   //     );
 

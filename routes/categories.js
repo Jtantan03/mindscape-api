@@ -19,27 +19,37 @@ export function createCategoryRouter(pool) {
 
   // post
   router.post("/", authenticate, async (req, res) => {
-    const user_id = req.user.user_id;
-    const data = req.body;
-    console.log("wow", data)
-    if (
-      !data.name 
-    ) {
-      return res.status(402).json({ err: "Missing data" });
+    try {
+      const user_id = req.user.user_id;
+      const data = req.body;
+  
+      if (!data.name) {
+        console.error("An error has occurred!");
+        return res.status(402).json({ err: "Missing data" });
+      }
+  
+      await pool.query(
+        `
+          INSERT INTO public.categories (category_name, user_id)
+          VALUES ($1, $2)
+          `,
+        [
+          data.name,
+          user_id,
+        ]
+      );
+  
+      res.json({ message: "Successfully created" });
+    } catch (err) {
+      if (err.code === "23505") { // Check if it's a "unique constraint violation" error
+        return res.status(400).json({ err: "Name already exists" });
+      } else {
+        console.error(err);
+        return res.status(500).json({ err: "Internal server error" });
+      }
     }
-    await pool.query(
-      `
-        INSERT INTO public.categories (category_name, user_id)
-        VALUES ($1, $2)
-        `,
-      [
-        data.name,
-        user_id,
-      ]
-    );
-
-    res.json({ message: "Successfully created" });
   });
+  
 
     // EDIT THE DATA
 
@@ -60,11 +70,20 @@ export function createCategoryRouter(pool) {
 
     //DELETE THE DATA
 
-    router.delete("/:id", async (req, res) => {
-      const id = req.params.id;
-      await pool.query("DELETE FROM public.categories WHERE id = $1", [id]);
+router.delete("/:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await pool.query("DELETE FROM public.categories WHERE id = $1", [id]);
+    if (result.rowCount > 0) {
       res.json({ message: "Category deleted successfully" });
-    });
+    } else {
+      res.status(404).json({ message: "Category not found" });
+    }
+  } catch (err) {
+    console.error("An error has occurred while deleting category.", err);
+    res.status(500).json({ message: "An error has occurred while deleting category." });
+  }
+});
 
-  return router;
+return router;
 }

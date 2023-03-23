@@ -5,24 +5,9 @@ import { authenticate } from "../middleware.js";
 export function createUserRouter(pool) {
   const router = Router();
 
-  // router.get("/:id", authenticate, async (req, res) => {
-  //   console.log("get")
-  //   console.log("id")
-  //   let id = req.params.id
-  //   if (id === "me")
-  //   { id = req.user.id }
-  //   const result = await pool.query(`SELECT * FROM public.users WHERE id =$1` ,[req.params.id]);
-  //   return res.json({ data: result.rows });
-  // });
-
   router.get("/me", authenticate, async (req, res) => {
-    console.log("get");
-    console.log("id");
     let id = req.user.user_id;
-    // req = { user: { user_id: 55 } }
-    // req.user = { user_id: 55 }
-    // id  = req.user.user_id
-    // req.user.id
+
     const result = await pool.query(`SELECT * FROM public.users WHERE id=$1`, [
       id,
     ]);
@@ -63,12 +48,11 @@ export function createUserRouter(pool) {
           data.address,
         ]
       );
-    } catch (error){
-      console.log(error.code)
-      if (error.code === "23505"){
-        return res.status(402).json({err: "username already exist"})
+    } catch (error) {
+      console.log(error.code);
+      if (error.code === "23505") {
+        return res.status(402).json({ err: "username already exist" });
       }
-
     }
     res.json({ message: "Successfully registered" });
   });
@@ -78,19 +62,6 @@ export function createUserRouter(pool) {
     const result = await pool.query("SELECT * FROM public.users");
     res.json({ data: result.rows });
   });
-
-  // router.get('/:id', authenticate, async (req, res) => {
-  //   const result = await pool.query(`SELECT * FROM public.users WHERE id ='${req.user.user_id}' `);
-  //   return res.json({ data: result.rows [ 0 ]});
-  // });
-
-  // router.get("/me", authenticate, async (req, res) => {
-  //   console.log("get")
-  //   console.log("id")
-  //   let id = req.user.user_id
-  //   const result = await pool.query(`SELECT * FROM public.users WHERE id ='${id}' `);
-  //   return res.json({ data: result.rows });
-  // });
 
   // //   put
   router.put("/:id", async (req, res) => {
